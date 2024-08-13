@@ -14,7 +14,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware pour parser les JSON
-app.use(json());
+app.use(express.json());
 
 // Connectez-vous à MongoDB
 mongoose.connect(MONGODB_URI, {
@@ -30,9 +30,6 @@ db.once('open', () => {
   console.log('Connecté à MongoDB');
 });
 
-// Middleware pour parser le JSON
-app.use(express.json());
-
 // Point de terminaison pour vérifier la connexion à la base de données
 app.get("/api/check-connection", async (req, res) => {
   try {
@@ -44,21 +41,62 @@ app.get("/api/check-connection", async (req, res) => {
 });
 
 /* Admin */
-//Récupère tous les admins
+// Récupère tous les admins
 app.get("/api/admin", async (req, res) => { 
   try {
-    const admin = await Admin.findOne(); // Récupérer les informations de l'admin de la base de données
+    const admin = await Admin.find(); // Récupérer les informations de l'admin de la base de données
     res.status(200).json(admin);
   } catch (error) {
     res.status(500).json({ message: 'Erreur lors de la récupération des informations de l\'admin', error });
   }
 });
 
-// Supprime un administrateur grâce à son ID
-app.delete('/api/admin/:id', async (req, res) => {
-  const adminId = req.params.id; 
+// Récupère un administrateur grâce à son username
+app.get('/api/admin/:username', async (req, res) => {
+  const adminUsername = req.params.username;
   try {
-    const result = await Admin.findByIdAndDelete(adminId);
+    const admin = await Admin.findOne({username : adminUsername});
+    if (admin) {
+      res.status(200).json(admin);
+    } else {
+      res.status(404).json({ message: "Administrateur non trouvé" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la récupération de l\'administrateur', error });
+  }
+});
+
+// Crée un nouvel administrateur
+app.post('/api/admin', async (req, res) => {
+  try {
+    const admin = new Admin(req.body);
+    const result = await admin.save();
+    res.status(201).json(result);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la création de l\'administrateur', error });
+  }
+});
+
+// Met à jour les informations de l'administrateur
+app.patch('/api/admin/:username', async (req, res) => {
+  const adminUsername = req.params.username;
+  try {
+    const result = await Admin.findOneAndUpdate({username : adminUsername}, req.body, { new: true });
+    if (result) {
+      res.status(200).json(result);
+    } else {
+      res.status(404).json({ message: "Administrateur non trouvé" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la mise à jour de l\'administrateur', error });
+  }
+});
+
+// Supprime un administrateur grâce à son ID
+app.delete('/api/admin/:username', async (req, res) => {
+  const adminUsername = req.params.username; 
+  try {
+    const result = await Admin.findOneAndDelete({ username: adminUsername });
     if (result) {
       res.status(200).json({ message: 'Administrateur supprimé avec succès' });
     } else {
@@ -74,21 +112,107 @@ app.delete('/api/admin/:id', async (req, res) => {
 // Récupère les informations du club
 app.get("/api/contact", async (req, res) => {
   try {
-    const contact = await Contact.findOne(); 
-    res.status(200).json(contact);
+    const contact = await Contact.find(); 
+    if (contact.length > 0) {
+      res.status(200).json(contact);
+    } else {
+      res.status(404).json({ message: "Aucune information de contact trouvée" });
+    }
   } catch (error) {
     res.status(500).json({ message: 'Erreur lors de la récupération des informations du club', error });
   }
 });
 
+// Crée les informations du club
+app.post('/api/contact', async (req, res) => {
+  try {
+    const contact = new Contact(req.body);
+    const result = await contact.save();
+    res.status(201).json(result);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la création des informations du club', error });
+  }
+});
+
+// Met à jour les informations du club
+app.patch('/api/contact', async (req, res) => {
+  try {
+    const result = await Contact.findOneAndUpdate(req.body);
+    if (result) {
+      res.status(200).json(result);
+    } else {
+      res.status(404).json({ message: "Informations du club non trouvées" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la mise à jour des informations du club', error });
+  }
+});
+
+
 /* Partenaires */
-//Récupère la liste de tous les partenaires
+// Récupère la liste de tous les partenaires
 app.get("/api/partners", async (req, res) => {
   try {
     const partners = await Partner.find(); 
     res.status(200).json(partners);
   } catch (error) {
     res.status(500).json({ message: 'Erreur lors de la récupération des partenaires', error });
+  }
+});
+
+// Récupère un partenaire grâce à son nom
+app.get('/api/partners/:name', async (req, res) => {
+  const partnerName = req.params.name;
+  try {
+    const partner = await Partner.findOne({name : partnerName});
+    if (partner) {
+      res.status(200).json(partner);
+    } else {
+      res.status(404).json({ message: "Partenaire non trouvé" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la récupération du partenaire', error });
+  }
+});
+
+// Crée un nouveau partenaire
+app.post('/api/partners', async (req, res) => {
+  try {
+    const partner = new Partner(req.body);
+    const result = await partner.save();
+    res.status(201).json(result);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la création du partenaire', error });
+  }
+});
+
+// Met à jour les informations du partenaire
+app.patch('/api/partners/:name', async (req, res) => {
+  const partnerName = req.params.name;
+  try {
+    const result = await Partner.findOneAndUpdate({name : partnerName}, req.body, { new: true });
+    if (result) {
+      res.status(200).json(result);
+    } else {
+      res.status(404).json({ message: "Partenaire non trouvé" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la mise à jour du partenaire', error });
+  }
+});
+
+// Supprime un partenaire grâce à son nom
+app.delete('/api/partners/:name', async (req, res) => {
+  const partnerName = req.params.name; 
+  try {
+    const result = await Partner.findOneAndDelete({name : partnerName});
+    if (result) {
+      res.status(200).json({ message: 'Partenaire supprimé avec succès' });
+    } else {
+      res.status(404).json({ message: "Partenaire non trouvé" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la suppression du partenaire', error });
   }
 });
 
@@ -103,6 +227,47 @@ app.get('/api/photos', async (req, res) => {
   }
 });
 
+// Récupère une photo grâce à son nom
+app.get('/api/photos/:picture', async (req, res) => {
+  const photoPicture = req.params.picture;
+  try {
+    const photo = await Photo.findOne({picture : photoPicture});
+    if (photo) {
+      res.status(200).json(photo);
+    } else {
+      res.status(404).json({ message: "Photo non trouvée" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la récupération de la photo', error });
+  }
+});
+
+// Crée une nouvelle photo
+app.post('/api/photos', async (req, res) => {
+  try {
+    const photo = new Photo(req.body);
+    const result = await photo.save();
+    res.status(201).json(result);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la création de la photo', error });
+  }
+});
+
+// Supprime une photo grâce à son nom
+app.delete('/api/photos/:picture', async (req, res) => {
+  const photoPicture = req.params.picture;
+  try {
+    const result = await Photo.findOneAndDelete({picture : photoPicture});
+    if (result) {
+      res.status(200).json({ message: 'Photo supprimée avec succès' });
+    } else {
+      res.status(404).json({ message: "Photo non trouvée" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la suppression de la photo', error });
+  }
+});
+
 /* Services */
 // Récupère la liste de tous les services
 app.get("/api/services", async (req, res) => {
@@ -113,6 +278,63 @@ app.get("/api/services", async (req, res) => {
     res.status(500).json({ message: 'Erreur lors de la récupération des services', error });
   }
 });
+
+// Récupère un service grâce à son nom
+app.get('/api/services/:name', async (req, res) => {
+  const serviceName = req.params.name;
+  try {
+    const service = await Service.findOne({name : serviceName});
+    if (service) {
+      res.status(200).json(service);
+    } else {
+      res.status(404).json({ message: "Service non trouvé" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la récupération du service', error });
+  }
+});
+
+// Crée un nouveau service
+app.post('/api/services', async (req, res) => {
+  try {
+    const service = new Service(req.body);
+    const result = await service.save();
+    res.status(201).json(result);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la création du service', error });
+  }
+});
+
+// Met à jour les informations du service
+app.patch('/api/services/:name', async (req, res) => {
+  const serviceName = req.params.name;
+  try {
+    const result = await Service.findOneAndUpdate({name : serviceName}, req.body, { new: true });
+    if (result) {
+      res.status(200).json(result);
+    } else {
+      res.status(404).json({ message: "Service non trouvé" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la mise à jour du service', error });
+  }
+});
+
+// Supprime un service grâce à son nom
+app.delete('/api/services/:name', async (req, res) => {
+  const serviceName = req.params.name; 
+  try {
+    const result = await Service.findOneAndDelete({name : serviceName});
+    if (result) {
+      res.status(200).json({ message: 'Service supprimé avec succès' });
+    } else {
+      res.status(404).json({ message: "Service non trouvé" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la suppression du service', error });
+  }
+});
+
 
 // Lancer le serveur
 app.listen(PORT, () => {
