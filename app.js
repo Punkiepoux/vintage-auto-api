@@ -1,6 +1,7 @@
 import express, { json } from "express";
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import cors from 'cors';
 import Admin from './models/admin.js';
 import Contact from './models/contact.js';
 import Partner from './models/partners.js';
@@ -12,6 +13,11 @@ dotenv.config();
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://admin:admin@localhost:27017/clubDB?authSource=clubDB';
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Utiliser CORS pour autoriser toutes les requêtes cross-origin
+app.use(cors({
+  origin: 'http://localhost:4200' // Autoriser uniquement votre application Angular
+}));
 
 // Middleware pour parser les JSON
 app.use(express.json());
