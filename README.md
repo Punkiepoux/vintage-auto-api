@@ -1,38 +1,36 @@
 # Vintage Auto API
 
-## Description
+MongoDB database server + Node JS APIs for the Vintage Auto App Angular application
 
-Serveur base de données MongoDB + APIs en Node JS pour l'application Angular Vintage Auto App
+## Launch
 
-## Lancement
-
-Il faut avoir Docker installé, puis rentrer les commandes suivantes :
+You need to have Docker installed, then enter the following commands:
 
 ```bash
 docker-compose build
-docker-copose up -d
+docker-compose up -d
 ```
 
-ou
+or
 
 ```bash
-docker-copose up --build
+docker-compose up --build
 ```
 
-Pour arrêter le container :
+To stop the container:
 
 ```bash
 docker-compose down
 ```
 
-Pour arrêter le container sans garder la mémoire :
+To stop the container and remove the volume:
 
 ```bash
 docker-compose down -v
 ```
 
-Pour relancer le container :
+To restart the container:
 
 ```bash
-docker-copose up -d
+docker-compose up -d
 ```
