@@ -143,7 +143,8 @@ app.post('/api/contact', async (req, res) => {
 // Met à jour les informations du club
 app.patch('/api/contact', async (req, res) => {
   try {
-    const result = await Contact.findOneAndUpdate(req.body);
+    const { _id, ...updateData } = req.body;
+    const result = await Contact.findOneAndUpdate({}, updateData, { new: true });
     if (result) {
       res.status(200).json(result);
     } else {
