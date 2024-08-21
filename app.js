@@ -46,6 +46,7 @@ app.get("/api/check-connection", async (req, res) => {
   }
 });
 
+
 /* Admin */
 // Récupère tous les admins
 app.get("/api/admin", async (req, res) => { 
@@ -75,7 +76,19 @@ app.get('/api/admin/:username', async (req, res) => {
 // Crée un nouvel administrateur
 app.post('/api/admin', async (req, res) => {
   try {
-    const admin = new Admin(req.body);
+    const { username, email, password } = req.body;
+
+    // Vérifier si l'utilisateur existe déjà
+    const existingAdmin = await Admin.findOne({ username });
+    if (existingAdmin) {
+      return res.status(400).json({ message: "L'administrateur existe déjà" });
+    }
+
+    // Chiffrer le mot de passe
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Créer l'administrateur avec le mot de passe chiffré
+    const admin = new Admin({ username, email, password: hashedPassword });
     const result = await admin.save();
     res.status(201).json(result);
   } catch (error) {
@@ -83,22 +96,55 @@ app.post('/api/admin', async (req, res) => {
   }
 });
 
-// Met à jour les informations de l'administrateur
-app.patch('/api/admin/:username', async (req, res) => {
-  const adminUsername = req.params.username;
+// Met à jour les informations de l'administrateur (username/email)
+app.patch('/api/admin/update-profile/:username', async (req, res) => {
+  const { username } = req.params;
+  const { newUsername, newEmail } = req.body; // Supposez que vous ajoutez un champ `image` dans le modèle Admin
+
   try {
-    const result = await Admin.findOneAndUpdate({username : adminUsername}, req.body, { new: true });
+    const updatedFields = {};
+    if (newUsername) updatedFields.username = newUsername;
+    if (newEmail) updatedFields.email = newEmail;
+
+    const result = await Admin.findOneAndUpdate({ username }, updatedFields, { new: true });
     if (result) {
       res.status(200).json(result);
     } else {
       res.status(404).json({ message: "Administrateur non trouvé" });
     }
   } catch (error) {
-    res.status(500).json({ message: 'Erreur lors de la mise à jour de l\'administrateur', error });
+    res.status(500).json({ message: 'Erreur lors de la mise à jour du profil', error });
   }
 });
 
-// Supprime un administrateur grâce à son ID
+// Change le mot de passe si l'ancien mot de passe est correct
+app.patch('/api/admin/change-password/:username', async (req, res) => {
+  const { username } = req.params;
+  const { oldPassword, newPassword } = req.body;
+
+  try {
+    const admin = await Admin.findOne({ username });
+    if (!admin) {
+      return res.status(404).json({ message: "Administrateur non trouvé" });
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, admin.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Ancien mot de passe incorrect" });
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    admin.password = hashedNewPassword;
+    await admin.save();
+
+    res.status(200).json({ message: "Mot de passe mis à jour avec succès" });
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la mise à jour du mot de passe', error });
+  }
+});
+
+
+// Supprime un administrateur grâce à son username
 app.delete('/api/admin/:username', async (req, res) => {
   const adminUsername = req.params.username; 
   try {
@@ -110,6 +156,29 @@ app.delete('/api/admin/:username', async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ message: 'Erreur lors de la suppression de l\'administrateur', error });
+  }
+});
+
+// Vérifie les informations de connexion de l'administrateur
+app.post('/api/admin/login', async (req, res) => {
+  const { username, password } = req.body;
+  try {
+    const admin = await Admin.findOne({ username });
+    if (!admin) {
+      return res.status(400).json({ message: "Nom d'utilisateur ou mot de passe incorrect" });
+    }
+
+    const isMatch = await bcrypt.compare(password, admin.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Nom d'utilisateur ou mot de passe incorrect" });
+    }
+
+    // Générer un token d'authentification (optionnel, pour une future implémentation)
+    const token = jwt.sign({ username: admin.username }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    res.status(200).json({ message: "Authentification réussie", token });
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de l\'authentification', error });
   }
 });
 
