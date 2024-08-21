@@ -2,6 +2,7 @@ import express, { json } from "express";
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import bcrypt from 'bcrypt';
 import Admin from './models/admin.js';
 import Contact from './models/contact.js';
 import Partner from './models/partners.js';
@@ -76,23 +77,21 @@ app.get('/api/admin/:username', async (req, res) => {
 // Crée un nouvel administrateur
 app.post('/api/admin', async (req, res) => {
   try {
-    const { username, email, password } = req.body;
-
-    // Vérifier si l'utilisateur existe déjà
+    const username = req.body.username;
+    const email = req.body.email;
+    const password = req.body.password;
     const existingAdmin = await Admin.findOne({ username });
-    if (existingAdmin) {
+    const existingEmail = await Admin.findOne({ email });
+    if (existingAdmin || existingEmail) {
       return res.status(400).json({ message: "L'administrateur existe déjà" });
     }
-
-    // Chiffrer le mot de passe
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Créer l'administrateur avec le mot de passe chiffré
-    const admin = new Admin({ username, email, password: hashedPassword });
+    req.body.password = hashedPassword;
+    const admin = new Admin(req.body);
     const result = await admin.save();
     res.status(201).json(result);
   } catch (error) {
-    res.status(500).json({ message: 'Erreur lors de la création de l\'administrateur', error });
+    res.status(500).json({ message: 'Erreur lors de la création de l\'administrateur', error: error.message });
   }
 });
 
