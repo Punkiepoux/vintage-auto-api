@@ -172,12 +172,9 @@ app.post('/api/admin/login', async (req, res) => {
       return res.status(400).json({ message: "Nom d'utilisateur ou mot de passe incorrect" });
     }
 
-    // Générer un token d'authentification (optionnel, pour une future implémentation)
-    const token = jwt.sign({ username: admin.username }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-    res.status(200).json({ message: "Authentification réussie", token });
+    res.status(200).json({ message: "Authentification réussie", username });
   } catch (error) {
-    res.status(500).json({ message: 'Erreur lors de l\'authentification', error });
+    res.status(500).json({ message: 'Erreur lors de l\'authentification', error: error.message });
   }
 });
 
